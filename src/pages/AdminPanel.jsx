@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loginAdmin, logoutAdmin, isAdminLoggedIn, addActivity, deleteActivity, getActivities } from '../lib/activityStore';
+import { loginAdmin, logoutAdmin, checkAuthStatus, addActivity, deleteActivity, getActivities } from '../lib/activityStore';
 import { Plus, Image as ImageIcon, X, Loader2, LogOut, Trash2 } from 'lucide-react';
 
 const AdminPanel = () => {
@@ -26,7 +26,7 @@ const AdminPanel = () => {
 
     useEffect(() => {
         const checkAuth = async () => {
-            const status = isAdminLoggedIn();
+            const status = await checkAuthStatus();
             setIsLoggedIn(status);
             if (status) {
                 const data = await getActivities();

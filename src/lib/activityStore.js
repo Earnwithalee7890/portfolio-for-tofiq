@@ -1,72 +1,86 @@
-// Fake asynchronous database service using localStorage for immediate demo purposes.
-// Once you create your Firebase project, you will replace these functions with Firebase calls.
+import { createClient } from '@supabase/supabase-js';
 
-const DELAY = 500; // simulate network latency
+const supabaseUrl = 'https://wwxxlyjgerdomxaziutk.supabase.co';
+const supabaseKey = 'sb_publishable_8uyzmszlOPGo-WzfcRZ78w_rEKqk6Au';
 
-// Helper to simulate network
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const loginAdmin = async (email, password) => {
-    await wait(DELAY);
-    // Hardcoded demo credentials
-    if (email === 'tofiquetofiquekhoso@gmail.com' && password === '627420') {
-        localStorage.setItem('admin_token', 'true');
-        return true;
-    }
-    throw new Error('Invalid credentials. Use tofiquetofiquekhoso@gmail.com / 627420');
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
+    if (error) throw new Error(error.message);
+    return true;
 };
 
-export const logoutAdmin = () => {
-    localStorage.removeItem('admin_token');
+export const logoutAdmin = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw new Error(error.message);
 };
 
-export const isAdminLoggedIn = () => {
-    return localStorage.getItem('admin_token') === 'true';
+export const checkAuthStatus = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return !!session;
 };
 
 export const getActivities = async () => {
-    await wait(DELAY);
-    const data = localStorage.getItem('portfolio_activities');
-    if (!data) return [];
+    const { data, error } = await supabase
+        .from('activities')
+        .select('*')
+        .order('date', { ascending: false });
 
-    // Sort by date (newest first)
-    const activities = JSON.parse(data);
-    return activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (error) {
+        console.error("Error fetching activities:", error);
+        return [];
+    }
+    return data;
 };
 
 export const addActivity = async (activityData, images) => {
-    await wait(DELAY);
+    // 1. Upload images to Supabase Storage bucket named 'activities'
+    const uploadedImageUrls = await Promise.all(
+        images.map(async (file, index) => {
+            const fileName = `${Date.now()}_${index}_${file.name.replace(/[^a-zA-Z0-9.\-]/g, '')}`;
+            const { data, error } = await supabase.storage
+                .from('activities')
+                .upload(fileName, file);
 
-    // In a real app (Firebase), you would upload images to Storage first, get their URLs, then save to DB.
-    // For this demo, we convert images to base64 strings to store in localStorage.
-    const base64Images = await Promise.all(
-        images.map((file) => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = (error) => reject(error);
-            });
+            if (error) throw new Error(`Upload failed: ${error.message}`);
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('activities')
+                .getPublicUrl(fileName);
+
+            return publicUrl;
         })
     );
 
+    // 2. Insert record into Supabase Database table named 'activities'
     const newActivity = {
-        id: Date.now().toString(),
-        ...activityData,
-        images: base64Images,
+        title: activityData.title,
+        date: activityData.date,
+        description: activityData.description,
+        tags: activityData.tags,
+        images: uploadedImageUrls,
         createdAt: new Date().toISOString()
     };
 
-    const existing = await getActivities();
-    const updated = [newActivity, ...existing];
-    localStorage.setItem('portfolio_activities', JSON.stringify(updated));
+    const { data, error } = await supabase
+        .from('activities')
+        .insert([newActivity])
+        .select();
 
-    return newActivity;
+    if (error) throw new Error(`Database insert failed: ${error.message}`);
+    return data[0];
 };
 
 export const deleteActivity = async (id) => {
-    await wait(DELAY);
-    const existing = await getActivities();
-    const filtered = existing.filter(act => act.id !== id);
-    localStorage.setItem('portfolio_activities', JSON.stringify(filtered));
+    const { error } = await supabase
+        .from('activities')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
 };
