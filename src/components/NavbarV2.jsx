@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Lock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const NavbarV2 = () => {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -31,10 +32,13 @@ const NavbarV2 = () => {
                 }`}
         >
             <div className="container mx-auto px-6 flex justify-between items-center">
-                <div className="text-xl font-bold text-white tracking-widest uppercase">
+                <div className="text-xl font-bold text-white tracking-widest uppercase flex items-center">
                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">
                         Toufique
                     </span>
+                    <Link to="/admin" className="ml-3 text-slate-600 hover:text-slate-300 transition-colors" title="Admin Login">
+                        <Lock className="w-4 h-4" />
+                    </Link>
                 </div>
 
                 {/* Desktop Menu */}
