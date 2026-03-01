@@ -34,7 +34,7 @@ export const getActivities = async () => {
         console.error("Error fetching activities:", error);
         return [];
     }
-    return data;
+    return data || [];
 };
 
 export const addActivity = async (activityData, images) => {
